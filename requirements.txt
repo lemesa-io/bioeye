@@ -1,0 +1,23 @@
+# Web Framework & Server
+fastapi==0.141.1
+uvicorn>=0.30.0
+python-multipart>=0.0.9
+
+# Google Gemini Vision SDK
+google-genai>=2.7.0
+
+# Database & Data Models
+SQLAlchemy==2.0.52
+pydantic==2.13.5
+
+# Authentication & Environment
+python-dotenv==1.2.3
+PyJWT==2.13.0
+passlib==1.7.4
+python-bcrypt==0.3.2
+
+# Image Processing & Utilities
+Pillow==12.3.0
+requests>=2.32.0
+beautifulsoup4>=4.12.0
+roboflow>=1.1.29

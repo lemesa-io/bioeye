@@ -1,0 +1,58 @@
+# --- PYTHON & BACKEND ---
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Python compiled bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Local SQLite databases (Contains user transaction logs & records)
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables & secret keys
+.env
+.env.local
+
+# --- NODE.JS & EXPO / REACT NATIVE ---
+# Dependencies
+bioeye-app/node_modules/
+node_modules/
+
+# Expo temporary files & build outputs
+bioeye-app/.expo/
+.expo/
+bioeye-app/dist/
+dist/
+bioeye-app/web-build/
+web-build/
+
+# Native iOS/Android build artifacts (if generated via prebuild)
+bioeye-app/ios/
+bioeye-app/android/
+
+# biological samples
+test-images/
+
+# --- OPERATIONAL & OS FILES ---
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs & Editors (VS Code / Claude configs if private)
+.vscode/
+.idea/
+*.swp
+*.swo
