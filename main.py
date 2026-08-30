@@ -9,7 +9,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-from google.api_core.exceptions import GoogleAPICallError
+from google.genai.errors import APIError
 
 from database import get_db
 # Pull your updated schemas and user logic securely from your split modules
@@ -230,7 +230,7 @@ async def analyze_sample(
             "metrics": parsed_metrics
         }
     
-    except GoogleAPICallError as api_err:
+    except APIError as api_err:
         print(f"Upstream Engine Failure: {api_err}")
         error_msg = getattr(api_err, "message", "Upstream model pipeline failure.")
         if "503" in str(api_err) or "demand" in str(api_err).lower():

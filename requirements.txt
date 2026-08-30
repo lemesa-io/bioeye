@@ -14,7 +14,7 @@ pydantic==2.13.5
 python-dotenv==1.2.3
 PyJWT==2.13.0
 passlib==1.7.4
-python-bcrypt==0.3.2
+bcrypt>=4.0.0
 
 # Image Processing & Utilities
 Pillow==12.3.0
