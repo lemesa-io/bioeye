@@ -194,7 +194,6 @@ async def analyze_sample(
     current_user: User = Depends(get_current_user)
 ):
     # --- TEMPORARY DEMO OVERRIDE ---
-    print(">>> HIT LOCAL ANALYZE_SAMPLE ENDPOINT <<<", flush=True)
     import asyncio
     await asyncio.sleep(1.2)  # Simulates authentic inference latency
     return {
