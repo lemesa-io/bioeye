@@ -8,9 +8,20 @@ https://github.com/user-attachments/assets/49fb02fe-0e43-42b5-a5d4-d1f4650c2902
 
 ---
 
+## 🌐 Live Interactive API & Sandbox
+
+Explore and test the live OpenAPI documentation and endpoints:
+
+* **Interactive Swagger UI:** [https://api.bioeye.lemesa.io/docs](https://api.bioeye.lemesa.io/docs)
+* **ReDoc Specification:** [https://api.bioeye.lemesa.io/redoc](https://api.bioeye.lemesa.io/redoc)
+
+> **Note on Public Sandbox:** The public API documentation at `api.bioeye.lemesa.io` operates in a demonstration sandbox (`MOCK_MODE=true`) returning simulated triage telemetry to protect against upstream quota exhaustion and unauthorized writes. To run authentic inference using live Gemini multimodal vision calls, follow the local setup instructions below with your own API key.
+
+---
+
 ## ⚡ Key Architecture & Features
 
-* **Multi-Stage Telemetry Pipeline:** 
+* **Multi-Stage Telemetry Pipeline:**
   1. **Phase 1 (Artifact Mitigation):** Validates image focus, signal-to-noise ratio, glare, and spatial resolution before parsing.
   2. **Phase 2 (Multi-Spectral Telemetry Extraction):** Maps sample metrics into structured markdown matrix blocks (Bristol Stool Scale typing, color spectral analysis, hydration indices, and presence of foreign artifacts).
   3. **Phase 3 (Deterministic Triage Rules):** Enforces boolean algorithmic safety barriers to classify states into clear risk tiers (`NORMAL`, `MONITOR`, `ATTENTION_REQUIRED`, `IMMEDIATE_ACTION`) using deterministic regex parsing.
@@ -77,14 +88,16 @@ https://github.com/user-attachments/assets/49fb02fe-0e43-42b5-a5d4-d1f4650c2902
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
    SECRET_KEY=your_secure_random_jwt_secret_key
+   # Set MOCK_MODE=true to simulate upstream responses without using API quota
+   MOCK_MODE=false
    ```
 
 4. **Start the FastAPI backend server:**
    ```bash
    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
-   * The API will be available at `http://localhost:8000`
-   * Interactive Swagger docs can be accessed at `http://localhost:8000/docs`
+   * The local API will be available at `http://localhost:8000`
+   * Local interactive Swagger docs can be accessed at `http://localhost:8000/docs`
 
 ---
 
