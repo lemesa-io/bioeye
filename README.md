@@ -4,6 +4,12 @@ A privacy-first, non-diagnostic physiological telemetry analysis engine and mobi
 
 The engine uses a deterministic three-phase pipeline—combining artifact mitigation, multi-spectral biomarker extraction, and boolean triage logic—to ensure safe, structured, and reproducible state classification without relying on free-form clinical LLM diagnosis.
 
+<div align="center">
+  <video src="https://bioeye.lemesa.io/bioeye-demo.mp4" controls="controls" width="360" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+    Your browser does not support the video tag. <a href="https://bioeye.lemesa.io/bioeye-demo.mp4">Watch the BioEye Demo Video</a>.
+  </video>
+</div>
+
 ---
 
 ## ⚡ Key Architecture & Features
