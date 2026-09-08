@@ -24,16 +24,16 @@ https://github.com/user-attachments/assets/49fb02fe-0e43-42b5-a5d4-d1f4650c2902
 
 ```text
 .
-├── bioeye-app/             # Expo / React Native mobile application
-│   ├── app/                # File-based routing and screens
-│   ├── components/         # UI elements, camera inputs & privacy masks
-│   └── package.json        # Frontend dependencies
-├── main.py                 # FastAPI application endpoints & analysis routes
-├── database.py             # SQLite database engine & session initialization
-├── models.py               # SQLAlchemy ORM schemas & telemetry logs
-├── auth.py                 # JWT generation, token verification & password hashing
-├── test_triage_vision.py   # CLI telemetry testing harness for Gemini vision
-├── requirements.txt        # Python backend dependencies
+├── bioeye-app/                  # Expo / React Native mobile application
+│   ├── app/                     # File-based routing and screens
+│   ├── components/              # UI elements, camera inputs & privacy masks
+│   └── package.json             # Frontend dependencies
+├── main.py                      # FastAPI application endpoints & analysis routes
+├── database.py                  # SQLite database engine & session initialization
+├── models.py                    # SQLAlchemy ORM schemas & telemetry logs
+├── auth.py                      # JWT generation, token verification & password hashing
+├── tests/test_triage_vision.py  # CLI telemetry testing harness for Gemini vision
+├── requirements.txt             # Python backend dependencies
 └── README.md
 ```
 
@@ -113,7 +113,7 @@ https://github.com/user-attachments/assets/49fb02fe-0e43-42b5-a5d4-d1f4650c2902
 To verify vision pipeline extraction on a test image from the command line:
 
 ```bash
-python test_triage_vision.py path/to/sample_image.jpg
+python tests/test_triage_vision.py path/to/sample_image.jpg
 ```
 
 ---

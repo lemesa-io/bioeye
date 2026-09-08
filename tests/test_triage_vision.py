@@ -5,8 +5,9 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Load environment variables from local .env file
-load_dotenv()
+# Load .env from project root
+root_dir = Path(__file__).resolve().parent.parent
+load_dotenv(root_dir / ".env")
 
 # ==========================================================
 # CONFIGURATION
@@ -22,7 +23,7 @@ if not GEMINI_API_KEY:
 # 2. Select your testing model:
 # - 'gemini-2.5-flash' is fast and cost-efficient
 # - 'gemini-2.5-pro' offers deeper reasoning capabilities
-MODEL_ID = "gemini-2.5-flash"
+MODEL_ID = "gemini-1.5-flash"
 # ==========================================================
 
 # Simple sanity check for the command line argument
