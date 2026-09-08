@@ -23,7 +23,7 @@ if not GEMINI_API_KEY:
 # 2. Select your testing model:
 # - 'gemini-2.5-flash' is fast and cost-efficient
 # - 'gemini-2.5-pro' offers deeper reasoning capabilities
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "gemini-2.5-flash"
 # ==========================================================
 
 # Simple sanity check for the command line argument
