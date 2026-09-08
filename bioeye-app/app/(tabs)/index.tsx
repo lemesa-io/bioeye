@@ -3,14 +3,12 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Ale
 import * as ImagePicker from 'expo-image-picker';
 import Markdown from 'react-native-markdown-display';
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system/legacy';
+import Constants from 'expo-constants';
 
 const CONFIG = {
-  SERVER_IP: "10.19.19.227",
-  //SERVER_IP: "10.163.95.72",
-  PORT: "8000",
-  get BASE_URL() {
-    return `http://${this.SERVER_IP}:${this.PORT}`;
-  }
+  // Set EXPO_PUBLIC_API_URL in your .env, or default to local FastAPI dev server
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000"
 };
 
 export default function HomeScreen() {
@@ -132,6 +130,27 @@ export default function HomeScreen() {
     setShowHistory(!showHistory);
   };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'BioEye needs camera access to capture Bristol samples.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+      setAnalysisResult(null); // <-- Ensure this is explicitly cleared!
+      setTriageTier(null);
+      setTierLabel(null);
+    }
+  };
+
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
@@ -159,37 +178,27 @@ export default function HomeScreen() {
     setIsProcessing(true);
 
     try {
-      const formData = new FormData();
-      const filename = image.split('/').pop() || 'sample.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      const uploadResult = await FileSystem.uploadAsync(
+        `${CONFIG.BASE_URL}/analyze`,
+        image,
+        {
+          fieldName: 'file',
+          httpMethod: 'POST',
+          uploadType: (FileSystem as any).FileSystemUploadType?.MULTIPART ?? (FileSystem as any).UploadType?.MULTIPART ?? 1,
+          headers: {
+            Accept: 'application/json',
+            ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}),
+          },
+        }
+      );
 
-      // @ts-ignore
-      formData.append('file', {
-        uri: image,
-        name: filename,
-        type: type,
-      });
-
-      console.log("Streaming asset matrix to remote server boundary...");
-      const RESPONSE_ENDPOINT = `${CONFIG.BASE_URL}/analyze`;
-
-      const response = await fetch(RESPONSE_ENDPOINT, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${userToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server network boundary returned fault code: ${response.status}`);
+      if (uploadResult.status !== 200) {
+        throw new Error(`Server returned status ${uploadResult.status}: ${uploadResult.body}`);
       }
 
       let result;
       try {
-        result = await response.json();
+        result = JSON.parse(uploadResult.body);
       } catch (parseError) {
         throw new Error("Failed to parse response JSON matrix.");
       }
@@ -285,8 +294,8 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.logoutButton} 
+          <TouchableOpacity
+            style={styles.logoutButton}
             onPress={async () => {
               // NEW: Evict the session keys from the hardware keychain
                 await SecureStore.deleteItemAsync('user_session_token');
@@ -418,11 +427,27 @@ export default function HomeScreen() {
 
       {/* Action Controls Section */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.secondaryButton} onPress={pickImage} disabled={isProcessing}>
-          <Text style={styles.secondaryButtonText}>
-            {image ? "Change Image" : "Select Sample Image"}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginBottom: image ? 10 : 0 }}>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { flex: 1 }]}
+            onPress={takePhoto}
+            disabled={isProcessing}
+          >
+            <Text style={styles.secondaryButtonText}>
+              📷 Take Photo
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryButton, { flex: 1 }]}
+            onPress={pickImage}
+            disabled={isProcessing}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {image ? "🖼️ Library" : "🖼️ Choose File"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {image && (
           <TouchableOpacity 
@@ -431,7 +456,7 @@ export default function HomeScreen() {
             disabled={isProcessing}
           >
             {isProcessing ? (
-              <ActivityIndicator color="#FFFFF1F" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.primaryButtonText}>Analyze Sample</Text>
             )}
@@ -563,17 +588,20 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: '100%',
-    aspectRatio: 1,
+    height: 320, // or your existing preview height
     position: 'relative',
     borderRadius: 16,
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    zIndex: 10,
   },
   loadingText: {
     color: '#F8FAFC',
