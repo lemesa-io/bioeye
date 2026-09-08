@@ -12,19 +12,17 @@ from dotenv import load_dotenv
 from google.genai.errors import APIError
 
 from database import get_db
-# Pull your updated schemas and user logic securely from your split modules
 from models import init_db, AnalysisRecord, User
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 from pydantic import BaseModel
 
-# Create a clean data model for handling registration payloads
 class UserSignUp(BaseModel):
     username: str
     password: str
 
 load_dotenv()
-app = FastAPI(title="BioEye Core AI 2Pipeline", version="1.0.0")
+app = FastAPI(title="BioEye Core AI Pipeline", version="1.0.0")
 init_db()
 
 # --- CROSS-ORIGIN RESOURCE SHARING (CORS) ---
@@ -38,7 +36,7 @@ app.add_middleware(
 
 # --- SYSTEM PARAMETERS ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "gemini-2.5-flash"
 
 SYSTEM_INSTRUCTION = """
 ROLE DEFINITION & PIPELINE CONSTRAINT:
@@ -91,7 +89,7 @@ IMPORTANT DEMO CONTEXT & OVERRIDE:
 - The input image is an educational clay / simulated model under indoor residential lighting.
 - Natural clay pigments, shadows, surface cocoa powder, or warm light reflections MUST NOT be classified as hematochezia or blood.
 - Only flag Tier 2 / Clinical Referral for bleeding if there is unmistakable, bright crimson red liquid actively present.
-- If the morphology is cylindrical and cohesive with surface cracks (Bristol Type 3) and uniform brown/earth tones, classify as Tier 3: STANDARD / NORMAL.
+- If the morphology is cylindrical and cohesive with surface cracks (Bristol Type 3) and uniform brown/earth tones, classify as Tier 1: STANDARD / NORMAL.
 """
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -104,7 +102,6 @@ def read_root():
 # --- IDENTITY MANAGEMENT ENDPOINTS ---
 @app.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(user_data: UserSignUp, db: Session = Depends(get_db)):
-    # Now user_data is cleanly bound to the function scope!
     print(f"Inbound payload parsed: {user_data.model_dump()}") 
     
     existing_user = db.query(User).filter(User.username == user_data.username).first()
@@ -126,7 +123,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- PROTECTED TRANSACTION ROUTING ---
+# --- PARSING & ANALYTICAL PIPELINE ---
 
 def parse_telemetry_markdown(raw_llm_output: str) -> dict:
     if "Image quality insufficient for analytical abstraction" in raw_llm_output:
@@ -141,17 +138,15 @@ def parse_telemetry_markdown(raw_llm_output: str) -> dict:
     
     sec1_match = re.search(r"### 1\. Visual Matrix & Artifact Filter(.*?)(?=### 2\.|\Z)", raw_llm_output, re.DOTALL)
     sec2_match = re.search(r"### 2\. Multi-Spectral Physiological Biomarker Matrix(.*?)(?=### 3\.|\Z)", raw_llm_output, re.DOTALL)
-    sec3_match = re.search(r"### 3\. Boolean Triage Status & Next Steps(.*?)(?=\Z)", raw_llm_output, re.DOTALL)
     
     s1_text = sec1_match.group(1).strip() if sec1_match else ""
     s2_text = sec2_match.group(1).strip() if sec2_match else ""
-    s3_text = sec3_match.group(1).strip() if sec3_match else ""
 
     # Parse Signal Integrity
     integrity_match = re.search(r"(?:integrity|score)\s*[:<= ]\s*([0-1]\.\d+)", s1_text, re.IGNORECASE)
     signal_integrity = float(integrity_match.group(1)) if integrity_match else 0.85
     
-    # NEW: Extract Hard Numeric Confidence Scores from Track Tokens
+    # Extract Numeric Confidence Scores from Track Tokens
     v_conf_match = re.search(r"\[TRACK_V_CONFIDENCE\s*::\s*(\d+)\]", s2_text)
     m_conf_match = re.search(r"\[TRACK_M_CONFIDENCE\s*::\s*(\d+)\]", s2_text)
     b_conf_match = re.search(r"\[TRACK_B_CONFIDENCE\s*::\s*(\d+)\]", s2_text)
@@ -161,7 +156,6 @@ def parse_telemetry_markdown(raw_llm_output: str) -> dict:
     b_score = int(b_conf_match.group(1)) if b_conf_match else 1
 
     # Deterministic Algorithmic State Machine Execution on Backend
-    # Server logic overrides the model text to ensure total precision
     max_critical_score = max(v_score, b_score)
     
     if max_critical_score >= 8:
@@ -193,11 +187,13 @@ async def analyze_sample(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # --- TEMPORARY DEMO OVERRIDE ---
-    import asyncio
-    await asyncio.sleep(1.2)  # Simulates authentic inference latency
-    return {
+    # Set MOCK_MODE=true in .env on production demo servers to prevent external quota spend
+    if os.environ.get("MOCK_MODE", "false").lower() == "true":
+        import asyncio
+        await asyncio.sleep(1.2)  # Simulates authentic inference latency
+        return {
             "success": True,
+            "filename": file.filename,
             "analysis": (
                 "### Clinical Assessment\n\n"
                 "**Bristol Stool Form Scale:** Type 3 (Like a sausage or snake, with cracks on the surface)\n"
@@ -212,12 +208,13 @@ async def analyze_sample(
                 "No immediate clinical intervention required. Continue standard dietary fiber intake and adequate hydration maintenance."
             ),
             "metrics": {
+                "is_valid_run": True,
                 "tier": 1,
                 "tier_label": "STANDARD / NORMAL",
-                "quality_insufficient": False
+                "quality_insufficient": False,
+                "extracted_biomarkers": {"vascular_bleeding": 1, "malabsorption": 1, "biliary_obstruction": 1}
             }
         }
-    # -------------------------------
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Uploaded asset must be an image format.")
@@ -227,48 +224,41 @@ async def analyze_sample(
     try:
         file_bytes = await file.read()
         img = Image.open(io.BytesIO(file_bytes))
-        
         print(f"Received binary image asset for User {current_user.id}: {filename} ({len(file_bytes)} bytes)")
         
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=[SYSTEM_INSTRUCTION, img]
-        )
-    except Exception as e:
-        print(f"Primary inference failed ({type(e).__name__}): {e}")
+        # Primary Inference with automatic fallback
         try:
-            print("Attempting fallback to gemini-1.5-flash...")
+            response = client.models.generate_content(
+                model=MODEL_ID,
+                contents=[SYSTEM_INSTRUCTION, img]
+            )
+        except APIError as primary_err:
+            print(f"Primary inference failed ({primary_err}). Attempting fallback to gemini-1.5-flash...")
             response = client.models.generate_content(
                 model="gemini-1.5-flash",
                 contents=[SYSTEM_INSTRUCTION, img]
             )
-        except Exception as fallback_err:
-            print(f"Fallback also failed: {fallback_err}")
-            raise fallback_err
-        
+            
         analysis_text = response.text
-        
-        # Parse the unstructured response into clean structured variables
         parsed_metrics = parse_telemetry_markdown(analysis_text)
         
-        # Log successful transaction tied explicitly to the authenticated user identity
+        # Log successful transaction tied explicitly to user
         db_record = AnalysisRecord(
             filename=filename,
             success=True,
-            analysis_output=analysis_text, # Keeps full text for history viewing
+            analysis_output=analysis_text,
             user_id=current_user.id
         )
         db.add(db_record)
         db.commit()
         
-        # Return both raw markdown (for react-native-markdown-display) and structured telemetry data
         return {
             "success": True,
             "filename": filename,
             "analysis": analysis_text,
             "metrics": parsed_metrics
         }
-    
+        
     except APIError as api_err:
         print(f"Upstream Engine Failure: {api_err}")
         error_msg = getattr(api_err, "message", "Upstream model pipeline failure.")
@@ -314,7 +304,7 @@ async def analyze_sample(
             "analysis": fallback_markdown,
             "metrics": {"is_valid_run": False, "quality_insufficient": False, "tier": 1, "tier_label": "INTERNAL FAULT"}
         }
-    
+
 @app.get("/history")
 def get_history_endpoint(
     db: Session = Depends(get_db),
@@ -324,7 +314,6 @@ def get_history_endpoint(
     
     formatted_records = []
     for r in records:
-        # Dynamically calculate the structured parameters for older rows on the fly
         metrics = parse_telemetry_markdown(r.analysis_output) if r.analysis_output else {
             "is_valid_run": False, "quality_insufficient": False, "tier": 1, "tier_label": "UNPARSED HISTORY"
         }
@@ -334,7 +323,7 @@ def get_history_endpoint(
             "filename": r.filename,
             "success": r.success,
             "analysis": r.analysis_output,
-            "metrics": metrics, # Emits the target dictionary back down to index.tsx!
+            "metrics": metrics,
             "created_at": r.created_at.isoformat()
         })
         
